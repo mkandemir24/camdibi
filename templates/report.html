@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Aylık Rapor{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Aylık Rapor</h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('report') }}" class="form-inline">
+                <div class="form-group mr-2">
+                    <label for="month" class="mr-2">Ay:</label>
+                    <select name="month" id="month" class="form-control">
+                        {% for i in range(1, 13) %}
+                            <option value="{{ i }}" {% if i == selected_month %}selected{% endif %}>{{ month_names[i-1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mr-2">
+                    <label for="year" class="mr-2">Yıl:</label>
+                    <select name="year" id="year" class="form-control">
+                        {% for y in range(current_year - 5, current_year + 2) %}
+                            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-info">Raporu Görüntüle</button>
+            </form>
+        </div>
+    </div>
+
+    <h3 class="mb-3">{{ month_names[selected_month-1] }} {{ selected_year }} Özeti</h3>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Toplam Gelir</div>
+                <div class="card-body">
+                    <h4 class="card-title">{{ "%.2f"|format(total_income) }} ₺</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-header">Toplam Gider</div>
+                <div class="card-body">
+                    <h4 class="card-title">{{ "%.2f"|format(total_expense) }} ₺</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white {{ 'bg-success' if net_balance >= 0 else 'bg-danger' }} mb-3">
+                <div class="card-header">Net Bakiye</div>
+                <div class="card-body">
+                    <h4 class="card-title">{{ "%.2f"|format(net_balance) }} ₺</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4 justify-content-center">
+        <div class="col-md-8">
+            <h4>Kişiye Göre Gelir Katkısı</h4>
+            <table class="table table-bordered table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>İsim</th>
+                        <th>Toplam Katkı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for name, income in member_incomes.items() %}
+                    <tr>
+                        <td>{{ name.title() }}</td>
+                        <td>{{ "%.2f"|format(income) }} ₺</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="2" class="text-center">Bu ay hiç gelir kaydedilmemiş.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

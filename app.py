@@ -1,4 +1,5 @@
 # Gerekli kütüphaneleri ve modülleri içe aktarıyoruz
+print("DEBUG: 1. Kütüphaneler yükleniyor...")
 from flask import Flask, render_template, request, redirect, url_for, flash, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -6,21 +7,31 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from datetime import date, datetime
 import calendar
+from collections import defaultdict
+print("DEBUG: 1. Kütüphaneler başarıyla yüklendi.")
 
 # --- UYGULAMA YAPILANDIRMASI ---
+print("DEBUG: 2. Flask uygulaması yapılandırılıyor...")
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SECRET_KEY'] = 'bu-anahtari-kimseyle-paylasma'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+print("DEBUG: 2. Flask uygulaması başarıyla yapılandırıldı.")
 
 # --- KÜTÜPHANE ENTEGRASYONLARI ---
+print("DEBUG: 3. Veritabanı ve Login Manager başlatılıyor...")
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+login_manager.login_message = "Bu sayfayı görüntülemek için lütfen giriş yapın."
+login_manager.login_message_category = "info"
+print("DEBUG: 3. Veritabanı ve Login Manager başarıyla başlatıldı.")
+
 
 # --- VERİTABANI MODELLERİ ---
+print("DEBUG: 4. Veritabanı modelleri tanımlanıyor...")
 transaction_members = db.Table('transaction_members',
     db.Column('transaction_id', db.Integer, db.ForeignKey('transaction.id'), primary_key=True),
     db.Column('member_id', db.Integer, db.ForeignKey('member.id'), primary_key=True)
@@ -52,8 +63,10 @@ class User(db.Model, UserMixin):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+print("DEBUG: 4. Veritabanı modelleri başarıyla tanımlandı.")
 
 # --- ROUTE'LAR (SAYFALAR) ---
+# ... (Tüm route fonksiyonlarınız burada, onlarda bir değişiklik yok)
 @app.route('/')
 @login_required
 def index():
@@ -77,6 +90,38 @@ def index():
                            selected_year=year, selected_month=month, month_names=month_names,
                            current_year=today.year, today=today.isoformat(), all_members=all_members)
 
+@app.route('/report')
+@login_required
+def report():
+    today = date.today()
+    year = request.args.get('year', default=today.year, type=int)
+    month = request.args.get('month', default=today.month, type=int)
+    start_date = date(year, month, 1)
+    end_date = date(year, month, calendar.monthrange(year, month)[1])
+    transactions = Transaction.query.filter(
+        Transaction.user_id == current_user.id,
+        Transaction.date >= start_date,
+        Transaction.date <= end_date
+    ).all()
+    member_incomes = defaultdict(float)
+    total_monthly_income = 0
+    total_monthly_expense = 0
+    for transaction in transactions:
+        if transaction.type == 'gelir':
+            total_monthly_income += transaction.amount
+            for member in transaction.members:
+                member_incomes[member.name] += transaction.amount
+        elif transaction.type == 'gider':
+            total_monthly_expense += transaction.amount
+    sorted_member_incomes = dict(sorted(member_incomes.items()))
+    net_monthly_balance = total_monthly_income - total_monthly_expense
+    month_names = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+    return render_template('report.html',
+                           selected_year=year, selected_month=month, month_names=month_names,
+                           current_year=today.year, total_income=total_monthly_income,
+                           total_expense=total_monthly_expense, net_balance=net_monthly_balance,
+                           member_incomes=sorted_member_incomes
+                           )
 @app.route('/add', methods=['POST'])
 @login_required
 def add_transaction():
@@ -85,22 +130,19 @@ def add_transaction():
         description=request.form.get('description'),
         amount=float(request.form.get('amount')),
         date=datetime.strptime(request.form.get('transaction_date'), '%Y-%m-%d').date(),
-        user_id=current_user.id  # ---- HATA BURADA DÜZELTİLDİ ----
+        user_id=current_user.id
     )
     member_ids = request.form.getlist('members')
     if not member_ids:
         flash('Lütfen işlemi yapan en az bir kişi seçin!', 'warning')
         return redirect(url_for('index', year=yeni_islem.date.year, month=yeni_islem.date.month))
-
     for member_id in member_ids:
         member = Member.query.get(member_id)
         if member:
             yeni_islem.members.append(member)
-        
     db.session.add(yeni_islem)
     db.session.commit()
     return redirect(url_for('index', year=yeni_islem.date.year, month=yeni_islem.date.month))
-
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_transaction(id):
@@ -126,7 +168,6 @@ def edit_transaction(id):
         return redirect(url_for('index', year=transaction_to_edit.date.year, month=transaction_to_edit.date.month))
     all_members = Member.query.all()
     return render_template('edit_transaction.html', transaction=transaction_to_edit, all_members=all_members)
-
 @app.route('/delete/<int:id>')
 @login_required
 def delete_transaction(id):
@@ -137,7 +178,6 @@ def delete_transaction(id):
     db.session.commit()
     flash('İşlem başarıyla silindi.', 'success')
     return redirect(request.referrer or url_for('index'))
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -150,7 +190,6 @@ def login():
         else:
             flash('Giriş başarısız. Kullanıcı adı veya şifre hatalı.', 'danger')
     return render_template('login.html')
-
 @app.route('/logout')
 @login_required
 def logout():
@@ -159,9 +198,13 @@ def logout():
     return redirect(url_for('login'))
 
 # --- UYGULAMAYI ÇALIŞTIRMA ---
+print("DEBUG: 5. Ana çalışma bloğuna giriliyor...")
 if __name__ == '__main__':
+    print("DEBUG: 6. Uygulama contexte giriliyor...")
     with app.app_context():
+        print("DEBUG: 7. Veritabanı tabloları oluşturuluyor (db.create_all)...")
         db.create_all()
+        print("DEBUG: 8. Varsayılan kullanıcı ve üyeler kontrol ediliyor...")
         if not User.query.filter_by(username='camdibi').first():
             default_user = User(username='camdibi')
             default_user.set_password('mınka')
@@ -171,5 +214,9 @@ if __name__ == '__main__':
             if not Member.query.filter_by(name=name).first():
                 member = Member(name=name)
                 db.session.add(member)
+        print("DEBUG: 9. Veritabanına değişiklikler kaydediliyor (db.session.commit)...")
         db.session.commit()
+        print("DEBUG: 10. Veritabanı işlemleri tamamlandı.")
+    
+    print("DEBUG: 11. Flask sunucusu başlatılıyor (app.run)...")
     app.run(debug=True)
