@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}İşlemi Düzenle{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>İşlemi Düzenle</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="">
+                    <div class="form-group">
+                        <label for="type">İşlem Tipi</label>
+                        <select name="type" id="type" class="form-control" required>
+                            <option value="gelir" {% if transaction.type == 'gelir' %}selected{% endif %}>Gelir</option>
+                            <option value="gider" {% if transaction.type == 'gider' %}selected{% endif %}>Gider</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Açıklama</label>
+                        <input type="text" id="description" name="description" class="form-control" value="{{ transaction.description }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="amount">Tutar</label>
+                        <input type="number" id="amount" name="amount" step="0.01" class="form-control" value="{{ transaction.amount }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="transaction_date">Tarih</label>
+                        <input type="date" id="transaction_date" name="transaction_date" class="form-control" value="{{ transaction.date.isoformat() }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Güncelle</button>
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">İptal</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

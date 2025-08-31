@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body"><h5 class="card-title">Güncel Bakiye</h5><h2 class="card-text {{ 'text-success' if bakiye >= 0 else 'text-danger' }}">{{ "%.2f"|format(bakiye) }} ₺</h2></div>
+            </div>
+            <div class="card">
+                <div class="card-body"><h5 class="card-title">Yeni İşlem Ekle</h5><form action="/add" method="POST"><div class="form-group"><select name="type" class="form-control" required><option value="gelir">Gelir</option><option value="gider">Gider</option></select></div><div class="form-group"><input type="text" name="description" class="form-control" placeholder="Açıklama" required></div><div class="form-group"><input type="number" name="amount" step="0.01" class="form-control" placeholder="Tutar" required></div><div class="form-group"><label for="transaction_date">Tarih</label><input type="date" id="transaction_date" name="transaction_date" class="form-control" value="{{ today }}" required></div><button type="submit" class="btn btn-primary btn-block">Ekle</button></form></div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <h3>Son İşlemler</h3>
+            <ul class="list-group">
+                {% for transaction in transactions %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center {% if transaction.type == 'gelir' %}list-group-item-success{% elif transaction.type == 'gider' %}list-group-item-danger{% endif %}">
+                        <div>
+                            {{ transaction.description }}<br>
+                            <small class="text-muted">{{ transaction.date.strftime('%d.%m.%Y') }} - {{ 'Gelir' if transaction.type == 'gelir' else 'Gider' }}</small>
+                        </div>
+                        <div>
+                            <span class="font-weight-bold {% if transaction.type == 'gelir' %}text-success{% endif %}">{{ "%.2f"|format(transaction.amount) }} ₺</span>
+                            
+                            <a href="{{ url_for('edit_transaction', id=transaction.id) }}" class="btn btn-sm btn-outline-secondary ml-2">Düzenle</a>
+
+                            <a href="{{ url_for('delete_transaction', id=transaction.id) }}" class="btn btn-sm btn-outline-danger ml-2">Sil</a>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}

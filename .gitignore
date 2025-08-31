@@ -1,0 +1,14 @@
+# Python cache dosyaları
+__pycache__/
+*.pyc
+
+# Sanal ortam klasörleri
+venv/
+.venv/
+env/
+
+# SQLite Veritabanı Dosyası
+
+
+# İşletim sistemi özel dosyaları
+.DS_Store
