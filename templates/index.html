@@ -4,30 +4,77 @@
     <div class="row">
         <div class="col-md-4">
             <div class="card mb-4">
-                <div class="card-body"><h5 class="card-title">Güncel Bakiye</h5><h2 class="card-text {{ 'text-success' if bakiye >= 0 else 'text-danger' }}">{{ "%.2f"|format(bakiye) }} ₺</h2></div>
+                <div class="card-body">
+                    <h5 class="card-title">Toplam Bakiye (Tüm Zamanlar)</h5>
+                    <h2 class="card-text {{ 'text-success' if bakiye >= 0 else 'text-danger' }}">{{ "%.2f"|format(bakiye) }} ₺</h2>
+                </div>
             </div>
             <div class="card">
-                <div class="card-body"><h5 class="card-title">Yeni İşlem Ekle</h5><form action="/add" method="POST"><div class="form-group"><select name="type" class="form-control" required><option value="gelir">Gelir</option><option value="gider">Gider</option></select></div><div class="form-group"><input type="text" name="description" class="form-control" placeholder="Açıklama" required></div><div class="form-group"><input type="number" name="amount" step="0.01" class="form-control" placeholder="Tutar" required></div><div class="form-group"><label for="transaction_date">Tarih</label><input type="date" id="transaction_date" name="transaction_date" class="form-control" value="{{ today }}" required></div><button type="submit" class="btn btn-primary btn-block">Ekle</button></form></div>
+                <div class="card-body">
+                    <h5 class="card-title">Yeni İşlem Ekle</h5>
+                    <form action="{{ url_for('add_transaction') }}" method="POST">
+                        <div class="form-group"><select name="type" class="form-control" required><option value="gelir">Gelir</option><option value="gider">Gider</option></select></div>
+                        <div class="form-group"><input type="text" name="description" class="form-control" placeholder="Açıklama" required></div>
+                        <div class="form-group"><input type="number" name="amount" step="0.01" class="form-control" placeholder="Tutar" required></div>
+                        
+                        <div class="form-group">
+                            <label>İşlemi Yapanlar</label>
+                            <div>
+                                {% for member in all_members %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" name="members" id="member-{{ member.id }}" value="{{ member.id }}">
+                                    <label class="form-check-label" for="member-{{ member.id }}">{{ member.name.title() }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="form-group"><label for="transaction_date">Tarih</label><input type="date" id="transaction_date" name="transaction_date" class="form-control" value="{{ today }}" required></div>
+                        <button type="submit" class="btn btn-primary btn-block">Ekle</button>
+                    </form>
+                </div>
             </div>
         </div>
-
         <div class="col-md-8">
-            <h3>Son İşlemler</h3>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <form method="GET" action="{{ url_for('index') }}" class="form-inline">
+                            <div class="form-group mr-2"><label for="month" class="mr-2">Ay:</label><select name="month" id="month" class="form-control">{% for i in range(1, 13) %}<option value="{{ i }}" {% if i == selected_month %}selected{% endif %}>{{ month_names[i-1] }}</option>{% endfor %}</select></div>
+                            <div class="form-group mr-2"><label for="year" class="mr-2">Yıl:</label><select name="year" id="year" class="form-control">{% for y in range(current_year - 5, current_year + 2) %}<option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></div>
+                            <button type="submit" class="btn btn-info">Filtrele</button>
+                        </form>
+                        <div class="ml-auto text-right">
+                            <h6 class="card-subtitle mb-2 text-muted">Seçili Ay Bakiyesi</h6>
+                            <h5 class="card-title {{ 'text-success' if monthly_bakiye >= 0 else 'text-danger' }}">{{ "%.2f"|format(monthly_bakiye) }} ₺</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <h3>{{ month_names[selected_month-1] }} {{ selected_year }} İşlemleri</h3>
             <ul class="list-group">
                 {% for transaction in transactions %}
                     <li class="list-group-item d-flex justify-content-between align-items-center {% if transaction.type == 'gelir' %}list-group-item-success{% elif transaction.type == 'gider' %}list-group-item-danger{% endif %}">
                         <div>
                             {{ transaction.description }}<br>
-                            <small class="text-muted">{{ transaction.date.strftime('%d.%m.%Y') }} - {{ 'Gelir' if transaction.type == 'gelir' else 'Gider' }}</small>
+                            <small class="text-muted">
+                                {{ transaction.date.strftime('%d.%m.%Y') }} - {{ 'Gelir' if transaction.type == 'gelir' else 'Gider' }}
+                                {% if transaction.members %}
+                                | Yapanlar: 
+                                {% for member in transaction.members %}
+                                    <span class="badge badge-info">{{ member.name.title() }}</span>
+                                {% endfor %}
+                                {% endif %}
+                            </small>
                         </div>
                         <div>
                             <span class="font-weight-bold {% if transaction.type == 'gelir' %}text-success{% endif %}">{{ "%.2f"|format(transaction.amount) }} ₺</span>
-                            
                             <a href="{{ url_for('edit_transaction', id=transaction.id) }}" class="btn btn-sm btn-outline-secondary ml-2">Düzenle</a>
-
                             <a href="{{ url_for('delete_transaction', id=transaction.id) }}" class="btn btn-sm btn-outline-danger ml-2">Sil</a>
                         </div>
                     </li>
+                {% else %}
+                    <li class="list-group-item">Bu dönem için gösterilecek işlem bulunamadı.</li>
                 {% endfor %}
             </ul>
         </div>
